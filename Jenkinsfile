@@ -1,49 +1,16 @@
 pipeline {
-    agent {
-        docker {
-            image 'docker:20.10.7'
-            args '-v /var/run/docker.sock:/var/run/docker.sock'
-        }
-    }
-
-    environment {
-        DOCKERHUB_USER = 'Hiesenberg'
-        DOCKERHUB_PASS = credentials('dockerhub-password') // Jenkins credential
-        IMAGE_NAME = 'portfolio-app'
-    }
+    agent any
 
     stages {
-        stage('Checkout') {
-            steps {
-                git branch: 'main', url: 'https://github.com/hiessenberg/MyPortfolio.git'
-            }
-        }
-
         stage('Build Docker Image') {
             steps {
-                sh '''
-                docker build -t $DOCKERHUB_USER/$IMAGE_NAME:latest .
-                '''
+                sh 'docker build -t myportfolio-app:latest .'
             }
         }
 
-        stage('Push to Docker Hub') {
+        stage('Run Container') {
             steps {
-                sh '''
-                echo $DOCKERHUB_PASS | docker login -u $DOCKERHUB_USER --password-stdin
-                docker push $DOCKERHUB_USER/$IMAGE_NAME:latest
-                '''
-            }
-        }
-
-        stage('Deploy') {
-            steps {
-                sh '''
-                docker pull $DOCKERHUB_USER/$IMAGE_NAME:latest
-                docker stop portfolio || true
-                docker rm portfolio || true
-                docker run -d -p 7001:80 --name portfolio $DOCKERHUB_USER/$IMAGE_NAME:latest
-                '''
+                sh 'docker run -d --name portfolio -p 8081:80 myportfolio-app:latest'
             }
         }
     }
